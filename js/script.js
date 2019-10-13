@@ -16,6 +16,10 @@ var dy =-2;
 var ballColors = [	"navy", "red", "yellow", "blue", "purple", "brown", "black", "orange"];
 var color = ballColors[0];
 
+var score = 0;
+var lives = 3;
+var level = 0;
+
 //define dimension for object that hits the ball
 var paddleWidth = 200;
 var paddleHeight = 25;
@@ -23,12 +27,31 @@ var paddleEdgeY = canvas.height - paddleHeight;
 var paddleStartPointX = (canvas.width - paddleWidth) / 2;
 var paddleStartPointY = paddleEdgeY;
 var paddleMiddlePoint = canvas.height * 0.40;
+var ballSpeed = 5;
 
 //keyhook properties
 var rightPress = false;
 var leftPress = false;
 var upPress = false;
 var downPress = false;
+
+//define dimentions of the bricks
+var brickRowCount = 8;
+var brickColumnCount = 6;
+var brickWidth = 132;
+var brickHeight = 30;
+var brickPadding = 20;
+var brickOffsetTop = 40;
+var brickOffsetLeft = 40;
+
+//initialize bricks
+var bricks = [];
+for (col = 0; col < brickColumnCount; col++){
+	bricks[col] = [];
+	for (row = 0; row < brickRowCount; row++) {
+		bricks[col][row] = { x: 0, y: 0, status: 1 };
+	}
+}
 
 function paddleBoundaries(){
 
@@ -66,23 +89,85 @@ function ballBoundaries(){
 		color = ballColors[Math.floor(Math.random() * (ballColors.length - 1) + 0)];
 	}
 
-			console.log("x: " + x);
-		console.log("pad: " + paddleStartPointX);
-
 	//top and bottom boundaries
 	if (y + dy < 0){
 		dy = -dy;
 		color = ballColors[Math.floor(Math.random() * (ballColors.length - 1) + 0)];
 	}
-	else if ((x+paddleWidth/2 > paddleStartPointX && x*paddleWidth/2 < (paddleStartPointX + paddleWidth)) && y + dy > paddleStartPointY){
+	//logic for the ball to bounce off the paddle that is at any height
+	else if ((x > paddleStartPointX && x < (paddleStartPointX + paddleWidth)) && (paddleStartPointY - y) < 5 && (paddleStartPointY - y > 0)){
 		dy = -dy;
 		color = ballColors[Math.floor(Math.random() * (ballColors.length - 1) + 0)];
+
+		//making the ball move faster
+		/*ballSpeed < 0 ? ballSpeed = 10 : ballSpeed--;
+		console.log("interval: " + interval)
+		var interval = setInterval(draw, ballSpeed);
+		clearInterval(interval);
+		/*console.log("x: " + x);
+		console.log("paddleStartPointX: " + paddleStartPointX);
+		console.log("paddleWidth and x: " + (paddleStartPointX+paddleWidth));
+		console.log("paddleStartPointY: " + paddleStartPointY);
+		console.log("y: " + y);
+		console.log("ballSpeed: " + ballSpeed);*/
 	}
 	else if (y + dy > canvas.height){
-		alert("GAME OVER!!!");
-		document.location.reload();
-		clearInterval(interval); 
+		lives--;
+		if (!lives){
+			//no lives game over
+			alert("GAME OVER!!!\nSCORE: " +score);
+			document.location.reload();
+			clearInterval(interval);
+		}
+		else{
+			//restart the ball and paddle from initial position
+			x = canvas.width/2;
+			y = canvas.height-30;
+			dx = 2;
+			dy = -2;
+			paddleStartPointX = (canvas.width-paddleWidth)/2;
+			paddleStartPointY = paddleEdgeY;
+		}
 	}
+}
+
+function collisionDetection(){
+	for (col=0; col < brickColumnCount; col++){
+		for (row=0; row < brickRowCount; row++){
+			var b = bricks[col][row];
+			if (b.status == 1){
+				//collision of brick and ball change direction and destroy brick
+				if (x > b.x && x < b.x+brickWidth && y > b.y && y < b.y+brickHeight){
+					dy = -dy;
+					b.status = 0;
+					score++;
+					color = ballColors[Math.floor(Math.random() * (ballColors.length - 1) + 0)];
+					if (score == brickRowCount * brickColumnCount){
+						alert("CONGRATULATIONS, YOU WON!!!\nSCORE: " + score);
+						document.location.reload();
+					}
+				}
+			}
+		}
+	}
+}
+
+function drawLives(){
+	ctx.font = "16px Arial";
+	ctx.fillStyle = "white";
+	ctx.fillText("Lives: " +lives, canvas.width-65, 15);
+}
+
+function drawScore(){
+	ctx.font = "16px Arial";
+	ctx.fillStyle = "white";
+	ctx.fillText("Score: "+score, 8, 15);
+}
+
+function drawLevels(){
+	ctx.font = "16px Arial";
+	ctx.fillStyle = "white";
+	ctx.fillText("Level: "+level, 8, 32);
 }
 
 function drawBall() {
@@ -94,7 +179,7 @@ function drawBall() {
 	ctx.closePath();
 }
 
-function paddleDraw(){
+function drawPaddle(){
 
 	ctx.beginPath();
 	ctx.rect(paddleStartPointX, paddleStartPointY, paddleWidth, paddleHeight);
@@ -103,11 +188,34 @@ function paddleDraw(){
 	ctx.closePath();
 }
 
+function drawBricks(){
+	for (col=0; col < brickColumnCount; col++){
+		for (row=0; row < brickRowCount; row++){
+			if (bricks[col][row].status == 1){
+				var brickX = (row*(brickWidth+brickPadding) + brickOffsetLeft);
+				var brickY = (col*(brickHeight+brickPadding) + brickOffsetTop);
+				bricks[col][row].x = brickX;
+				bricks[col][row].y = brickY;
+				ctx.beginPath();
+				ctx.rect(brickX, brickY, brickWidth, brickHeight);
+				ctx.fillStyle = "#0095DD";
+				ctx.fill();
+				ctx.closePath();
+			}
+		}
+	}
+}
+
 function draw(){
 	
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
+	drawBricks();
+	drawScore();
+	drawLives();
+	drawLevels();
 	drawBall();
-	paddleDraw();
+	drawPaddle();
+	collisionDetection();
 	ballBoundaries();
 	paddleBoundaries();
 
@@ -149,9 +257,24 @@ function keyUpHandler(e){
 	}
 }
 
+//logic for paddle movement mouse click event
+function mouseMoveHandler(e){
+	var relativeX = e.clientX - canvas.offsetLeft;
+	var relativeY = e.clientY - canvas.offsetTop;
+	if (relativeX > 0 && relativeX < canvas.width && relativeY > paddleMiddlePoint && relativeY < paddleEdgeY){
+		paddleStartPointX = relativeX - paddleWidth/2;
+		paddleStartPointY = relativeY;
+	}
+}
+
 //keyhook event listeners
 document.addEventListener("keydown", keyDownHandler, false);
 document.addEventListener("keyup", keyUpHandler, false);
 
+//mouse event listeners
+document.addEventListener("mousemove", mouseMoveHandler, false);
+
 //redraw after set time
-var interval = setInterval(draw, 10);
+var interval = setInterval(draw, ballSpeed);
+//draw();
+//requestAnimationFrame(draw);
